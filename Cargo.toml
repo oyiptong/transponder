@@ -1,0 +1,6 @@
+[package]
+name = "transponder"
+version = "0.1.0"
+authors = ["Olivier Yiptong <olivier@olivieryiptong.com>"]
+
+[dependencies]
