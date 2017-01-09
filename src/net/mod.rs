@@ -30,13 +30,12 @@ impl Future for UDPTransponder {
     }
 }
 
-pub struct UDPServer<'a> {
+pub struct UDPServer {
     ioloop: tokio_core::reactor::Core,
     transponder: UDPTransponder,
-    addr: &'a SocketAddr,
 }
 
-impl<'a> UDPServer<'a> {
+impl UDPServer {
     pub fn new(addr: &SocketAddr) -> Result<UDPServer, io::Error> {
         let ioloop = try!(Core::new());
         let handle = ioloop.handle();
@@ -49,12 +48,10 @@ impl<'a> UDPServer<'a> {
         Ok(UDPServer {
             ioloop: ioloop,
             transponder: server,
-            addr: addr,
         })
     }
     
     pub fn run(&mut self) -> Result<(), io::Error>{
-        println!("Listening on: {} using UDP", self.addr);
         let transponder = &mut self.transponder;
         try!(self.ioloop.run(transponder));
         Ok(())

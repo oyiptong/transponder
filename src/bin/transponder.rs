@@ -3,19 +3,19 @@ extern crate log;
 extern crate env_logger;
 extern crate transponder;
 
-use std::env;
-use std::net::SocketAddr;
-
-use transponder::utils::{unexpected_error, unexpected_io_error};
+use transponder::utils::{
+    unexpected_error,
+    unexpected_io_error,
+    parse_config,
+};
 use transponder::net::UDPServer;
 
 
 fn main() {
     env_logger::init().expect("Unable to init logger");
 
-    let addr = env::args().nth(1).unwrap_or("127.0.0.1:48656".to_string());
-    let addr = addr.parse::<SocketAddr>().unwrap_or_else({|e| unexpected_error(e)});
+    let config = parse_config().unwrap_or_else({ |e| unexpected_error(e) });
 
-    let udp_server = &mut UDPServer::new(&addr).unwrap_or_else({|e| unexpected_io_error(e)});
-    udp_server.run().unwrap_or_else({|e| unexpected_io_error(e)});
+    let udp_server = &mut UDPServer::new(&config.addr).unwrap_or_else({ |e| unexpected_io_error(e) });
+    udp_server.run().unwrap_or_else({ |e| unexpected_io_error(e) });
 }
