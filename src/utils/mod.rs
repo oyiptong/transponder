@@ -28,6 +28,7 @@ pub fn unexpected_io_error(err :io::Error) -> ! {
 #[derive(Clone)]
 pub struct Config {
     pub addr: SocketAddr,
+    pub satcom_url: String,
     http_threadpool: ThreadPool,
     num_server_threads: u16,
 }
@@ -39,6 +40,7 @@ pub fn parse_config() -> Result<Config, Error> {
         .args_from_usage(
             "-a --addr=[ADDR] 'The IP:PORT the server listens on (default \"127.0.0.1:48656\")'
              -c --client-threads=[CLIENT-THREADS] 'The number of HTTP client threads (default 1)'
+             -s --satcom-url=[SATCOM-URL] 'URL for SATCOM endpoint (default http://localhost:55555/v1/tracking/events)' 
              -t --threads=[THREADS] 'The number of server threads (default 4)'"
         )
         .get_matches();
@@ -47,6 +49,7 @@ pub fn parse_config() -> Result<Config, Error> {
     let default_http_client_threads = 1;
 
     let addr = matches.value_of("ADDR").unwrap_or("127.0.0.1:48656");
+    let satcom_url = matches.value_of("SATCOM-URL").unwrap_or("http://localhost:55555/v1/tracking/events");
     let num_server_threads = match matches.value_of("THREADS") {
         Some(s) => { try!(s.parse()) },
         None => default_server_threads,
@@ -57,11 +60,13 @@ pub fn parse_config() -> Result<Config, Error> {
     };
 
     println!("addr: udp://{}", addr);
+    println!("satcom_url: {}", satcom_url);
     println!("http client threads: {}", num_http_client_threads);
     println!("server threads: {}", num_server_threads);
 
     Ok(Config {
         addr: try!(addr.parse()),
+        satcom_url: satcom_url.to_string(),
         http_threadpool: ThreadPool::new(num_http_client_threads),
         num_server_threads: num_server_threads,
     })
