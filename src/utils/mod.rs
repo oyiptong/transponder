@@ -1,5 +1,4 @@
 extern crate threadpool;
-extern crate clap;
 extern crate error_type;
 
 use std;
@@ -30,31 +29,29 @@ pub struct Config {
     pub addr: SocketAddr,
     pub satcom_url: String,
     http_threadpool: ThreadPool,
-    num_server_threads: u16,
+    pub num_server_threads: u16,
 }
 
 pub fn parse_config() -> Result<Config, Error> {
-    let matches = App::new("transponder")
-        .version("0.1.0")
-        .about("A server that proxies UDP JSON payloads and forwards to SATCOM")
-        .args_from_usage(
-            "-a --addr=[ADDR] 'The IP:PORT the server listens on (default \"127.0.0.1:48656\")'
-             -c --client-threads=[CLIENT-THREADS] 'The number of HTTP client threads (default 1)'
-             -s --satcom-url=[SATCOM-URL] 'URL for SATCOM endpoint (default http://localhost:55555/v1/tracking/events)' 
-             -t --threads=[THREADS] 'The number of server threads (default 4)'"
-        )
-        .get_matches();
+    let matches = clap_app!(transponder =>
+        (version: "0.1.0")
+        (about: "A server that proxies UDP JSON payloads and forwards to SATCOM")
+        (@arg ADDR: -a --addr +takes_value "The IP:PORT the server listens on (default '127.0.0.1:48656')")
+        (@arg CLIENT_THREADS: -c --client_threads +takes_value "The number of HTTP client threads (default 1)")
+        (@arg SATCOM_URL: -s --satcom_url +takes_value "URL for SATCOM endpoint (default http://localhost:55555/v1/tracking/events)")
+        (@arg THREADS: -t --threads +takes_value "The number of server threads (default 4)")
+    ).get_matches();
 
     let default_server_threads = 4;
     let default_http_client_threads = 1;
 
     let addr = matches.value_of("ADDR").unwrap_or("127.0.0.1:48656");
-    let satcom_url = matches.value_of("SATCOM-URL").unwrap_or("http://localhost:55555/v1/tracking/events");
+    let satcom_url = matches.value_of("SATCOM_URL").unwrap_or("http://localhost:55555/v1/tracking/events");
     let num_server_threads = match matches.value_of("THREADS") {
         Some(s) => { try!(s.parse()) },
         None => default_server_threads,
     };
-    let num_http_client_threads = match matches.value_of("CLIENT-THREADS") {
+    let num_http_client_threads = match matches.value_of("CLIENT_THREADS") {
         Some(s) => { try!(s.parse()) },
         None => default_http_client_threads,
     };
