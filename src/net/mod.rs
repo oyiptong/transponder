@@ -4,7 +4,6 @@ extern crate net2;
 extern crate error_type;
 extern crate threadpool;
 
-
 use std::{io, thread, str};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, Condvar};
@@ -57,7 +56,7 @@ fn run_client(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -> Resu
         match items.pop() {
             Some(item) => {
                 debug!("RECEIVED: {} bytes", item.len());
-                debug!("SENDING_TO: {}", config.satcom_url);
+                debug!("SENDING_TO: {}", config.receiver_url);
             },
             None => {
                 debug!("client: nothing to do");
