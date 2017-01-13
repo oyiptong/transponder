@@ -16,6 +16,6 @@ fn main() {
 
     let config = parse_config().unwrap_or_else({ |e| unexpected_error(e) });
 
-    let udp_server = &mut UDPServer::new(&config.addr).unwrap_or_else({ |e| unexpected_io_error(e) });
+    let udp_server = &mut UDPServer::new(&config);
     udp_server.run().unwrap_or_else({ |e| unexpected_io_error(e) });
 }

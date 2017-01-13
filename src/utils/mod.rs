@@ -1,4 +1,3 @@
-extern crate threadpool;
 extern crate error_type;
 
 use std;
@@ -6,8 +5,6 @@ use std::io;
 use std::error::Error as StdError;
 use std::process::exit;
 use std::net::SocketAddr;
-use self::threadpool::ThreadPool;
-use self::clap::App;
 
 pub fn unexpected_error<T>(err :T) -> !
     where T: StdError,
@@ -28,8 +25,7 @@ pub fn unexpected_io_error(err :io::Error) -> ! {
 pub struct Config {
     pub addr: SocketAddr,
     pub satcom_url: String,
-    http_threadpool: ThreadPool,
-    pub num_server_threads: u16,
+    pub num_client_threads: u16,
 }
 
 pub fn parse_config() -> Result<Config, Error> {
@@ -39,18 +35,12 @@ pub fn parse_config() -> Result<Config, Error> {
         (@arg ADDR: -a --addr +takes_value "The IP:PORT the server listens on (default '127.0.0.1:48656')")
         (@arg CLIENT_THREADS: -c --client_threads +takes_value "The number of HTTP client threads (default 1)")
         (@arg SATCOM_URL: -s --satcom_url +takes_value "URL for SATCOM endpoint (default http://localhost:55555/v1/tracking/events)")
-        (@arg THREADS: -t --threads +takes_value "The number of server threads (default 4)")
     ).get_matches();
 
-    let default_server_threads = 4;
-    let default_http_client_threads = 1;
+    let default_http_client_threads = 4;
 
     let addr = matches.value_of("ADDR").unwrap_or("127.0.0.1:48656");
     let satcom_url = matches.value_of("SATCOM_URL").unwrap_or("http://localhost:55555/v1/tracking/events");
-    let num_server_threads = match matches.value_of("THREADS") {
-        Some(s) => { try!(s.parse()) },
-        None => default_server_threads,
-    };
     let num_http_client_threads = match matches.value_of("CLIENT_THREADS") {
         Some(s) => { try!(s.parse()) },
         None => default_http_client_threads,
@@ -59,13 +49,11 @@ pub fn parse_config() -> Result<Config, Error> {
     println!("addr: udp://{}", addr);
     println!("satcom_url: {}", satcom_url);
     println!("http client threads: {}", num_http_client_threads);
-    println!("server threads: {}", num_server_threads);
 
     Ok(Config {
         addr: try!(addr.parse()),
         satcom_url: satcom_url.to_string(),
-        http_threadpool: ThreadPool::new(num_http_client_threads),
-        num_server_threads: num_server_threads,
+        num_client_threads: num_http_client_threads,
     })
 }
 

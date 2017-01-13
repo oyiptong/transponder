@@ -8,9 +8,12 @@ clap = "2.20.0"
 env_logger = "0.3.5"
 error-type = "0.1.2"
 futures = "0.1.7"
+libc = "0.2.18"
 log = "0.3.6"
+net2 = "0.2.26"
 rustfmt = "0.6.3"
 threadpool = "1.3.2"
+time = "0.1.35"
 tokio-core = "0.1.2"
 
 [dependencies.hyper]
