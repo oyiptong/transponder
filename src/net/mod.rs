@@ -98,8 +98,17 @@ fn run_udp_receiver(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -
     let handle = ioloop.handle();
 
     let builder = try!(UdpBuilder::new_v4());
-    try!(builder.reuse_address(true));
-    try!(builder.reuse_port(true));
+
+    match builder.reuse_address(true) {
+        Ok(_) => debug!("enabled SO_REUSEADDR"),
+        Err(e) => warn!("failed to enable SO_REUSEADDR: {}", e.description()),
+    }
+
+    match builder.reuse_port(true) {
+        Ok(_) => debug!("enabled SO_REUSEPORT"),
+        Err(e) => warn!("failed to enable SO_REUSEPORT: {}", e.description()),
+    }
+
     let socket = try!(builder.bind(&config.addr));
     let evented_socket = try!(UdpSocket::from_socket(socket, &handle));
 
