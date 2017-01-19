@@ -3,8 +3,10 @@ extern crate futures;
 extern crate net2;
 extern crate error_type;
 extern crate threadpool;
+extern crate hyper;
 
 use std::{io, thread, str};
+use std::error::Error as StdError;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, Condvar};
 use self::net2::unix::UnixUdpBuilderExt;
@@ -44,7 +46,8 @@ impl Future for UDPTransponder {
     }
 }
 
-fn run_client(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -> Result<(), Error> {
+/// Starts a worker that waits for JSON payloads to send
+fn run_json_sender_worker(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>, client: Arc<hyper::Client>) -> Result<(), Error> {
     let &(ref lock, ref cvar) = &*sync;
     loop {
         let mut items = lock.lock().expect("client failed to acquire lock");
@@ -55,8 +58,28 @@ fn run_client(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -> Resu
 
         match items.pop() {
             Some(item) => {
-                debug!("RECEIVED: {} bytes", item.len());
-                debug!("SENDING_TO: {}", config.receiver_url);
+                info!("SENDING: {} bytes", item.len());
+
+                let mut headers = Headers::new();
+                headers.set(ContentType(Mime(
+                    TopLevel::Application,
+                    SubLevel::Json,
+                    vec![(Attr::Charset, Value::Utf8)],
+                )));
+
+                let res = client.post(config.receiver_url.as_str())
+                    .headers(headers)
+                    .body(item.as_slice())
+                    .send();
+
+                match res {
+                    Ok(response) => {
+                        info!("RESPONSE: {}", response.status);
+                    },
+                    Err(e) => {
+                        info!("REQUEST_ERROR: {}", e.description());
+                    },
+                }
             },
             None => {
                 debug!("client: nothing to do");
