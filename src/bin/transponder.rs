@@ -8,7 +8,7 @@ use transponder::utils::{
     unexpected_io_error,
     parse_config,
 };
-use transponder::net::UDPServer;
+use transponder::net::UDPTransponder;
 
 
 fn main() {
@@ -16,6 +16,6 @@ fn main() {
 
     let config = parse_config().unwrap_or_else({ |e| unexpected_error(e) });
 
-    let udp_server = &mut UDPServer::new(&config);
-    udp_server.run().unwrap_or_else({ |e| unexpected_io_error(e) });
+    let server = &mut UDPTransponder::new(&config);
+    server.run().unwrap_or_else({ |e| unexpected_io_error(e) });
 }

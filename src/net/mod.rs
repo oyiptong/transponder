@@ -16,16 +16,19 @@ use tokio_core::reactor::Core;
 use futures::{Future, Poll};
 use utils::{Config, Error};
 use self::threadpool::ThreadPool;
+use hyper::header::{Headers, ContentType};
+use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
 
-struct UDPTransponder {
+/// A server that forwards payloads from a UDP socket for processing
+struct UDPReceiver {
     socket: UdpSocket,
     buf: Vec<u8>,
     incoming: Option<(usize, SocketAddr)>,
     sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>,
 }
 
-impl Future for UDPTransponder {
+impl Future for UDPReceiver {
     type Item = ();
     type Error = io::Error;
 
@@ -88,45 +91,52 @@ fn run_json_sender_worker(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condva
     }
 }
 
-fn run_server(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -> Result<(), Error> {
+/// Starts an evented UDP message listener
+/// It is assumed that the port being listened to is re-used
+fn run_udp_receiver(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -> Result<(), Error> {
     let mut ioloop = try!(Core::new());
     let handle = ioloop.handle();
-    let sock = try!(UdpBuilder::new_v4());
-    try!(sock.reuse_address(true));
-    try!(sock.reuse_port(true));
-    let listener = try!(sock.bind(&config.addr));
-    let listener = try!(UdpSocket::from_socket(listener, &handle));
-    let server = UDPTransponder {
-        socket: listener,
+
+    let builder = try!(UdpBuilder::new_v4());
+    try!(builder.reuse_address(true));
+    try!(builder.reuse_port(true));
+    let socket = try!(builder.bind(&config.addr));
+    let evented_socket = try!(UdpSocket::from_socket(socket, &handle));
+
+    let receiver = UDPReceiver {
+        socket: evented_socket,
         buf: vec![0; 1024],
         incoming: None,
         sync: sync,
     };
-    try!(ioloop.run(server));
+
+    try!(ioloop.run(receiver));
     Ok(())
 }
 
-pub struct UDPServer {
+// A server that waits on UDP inputs and sends messages to a listening server
+pub struct UDPTransponder {
     config: Config,
 }
 
-impl UDPServer {
-    pub fn new(config: &Config) -> UDPServer {
+impl UDPTransponder {
+    pub fn new(config: &Config) -> UDPTransponder {
         let conf = config.clone();
-        UDPServer {
+        UDPTransponder {
             config: conf,
         }
     }
 
+    /// Starts receiver and sender threads
     pub fn run(&mut self) -> Result<(), io::Error>{
-        let pair = Arc::new((Mutex::new(Vec::new()), Condvar::new()));
+        let sync_pair = Arc::new((Mutex::new(Vec::new()), Condvar::new()));
 
-        let p = pair.clone();
+        let sp = sync_pair.clone();
         let config = self.config.clone();
         let server = thread::Builder::new()
             .name("input".into())
             .spawn(move || {
-                let _ = run_server(config, p);
+                let _ = run_udp_receiver(config, sp);
             })
             .expect("input thread failed");
 
@@ -135,7 +145,7 @@ impl UDPServer {
 
         for _ in 0..self.config.num_client_threads {
             let conf = self.config.clone();
-            let sp = pair.clone();
+            let sp = sync_pair.clone();
             let c = http_client.clone();
             worker_pool.execute(move || {
                 let _ = run_json_sender_worker(conf, sp, c);
