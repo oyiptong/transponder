@@ -130,13 +130,15 @@ impl UDPServer {
             })
             .expect("input thread failed");
 
-        let client_pool = ThreadPool::new(self.config.num_client_threads as usize);
+        let worker_pool = ThreadPool::new(self.config.num_client_threads as usize);
+        let http_client = Arc::new(hyper::Client::new());
 
         for _ in 0..self.config.num_client_threads {
-            let c = self.config.clone();
-            let p = pair.clone();
-            client_pool.execute(move || {
-                let _ = run_client(c, p);
+            let conf = self.config.clone();
+            let sp = pair.clone();
+            let c = http_client.clone();
+            worker_pool.execute(move || {
+                let _ = run_json_sender_worker(conf, sp, c);
             });
         }
 
