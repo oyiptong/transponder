@@ -42,7 +42,7 @@ impl Future for UDPReceiver {
                 let &(ref lock, ref cvar) = &*self.sync;
                 let mut items = lock.lock().expect("input failed to acquire lock");
                 items.push(byte_vec);
-                cvar.notify_one();
+                cvar.notify_all();
                 self.incoming = None;
             }
         }
