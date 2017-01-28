@@ -114,7 +114,7 @@ fn run_udp_receiver(config: Config, sync: Arc<(Mutex<Vec<Vec<u8>>>, Condvar)>) -
 
     let receiver = UDPReceiver {
         socket: evented_socket,
-        buf: vec![0; 1024],
+        buf: vec![0; config.mtu as usize],
         incoming: None,
         sync: sync,
     };
