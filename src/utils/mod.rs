@@ -34,14 +34,14 @@ pub fn parse_config() -> Result<Config, Error> {
     let matches = clap_app!(transponder =>
         (version: "0.1.0")
         (about: "A server that proxies UDP JSON payloads and forwards to an HTTP endpoint")
-        (@arg MTU: -p --packet_size +takes_value "Max packet size in bytes (minimum 1400)")
+        (@arg MTU: -p --packet_size +takes_value "Max packet size in bytes (default/minimum 1400)")
         (@arg ADDR: -a --addr +takes_value "The IP:PORT the server listens on (default '127.0.0.1:48656')")
         (@arg CLIENT_THREADS: -c --client_threads +takes_value "The number of HTTP client threads (default 1)")
         (@arg RECEIVER_URL: -s --receiver_url +takes_value "URL for receiver endpoint (default http://localhost:55555/v1/tracking/events)")
     ).get_matches();
 
     let default_http_client_threads = 4;
-    let default_packet_size = 1500;
+    let default_packet_size = 1400;
 
     let addr = matches.value_of("ADDR").unwrap_or("127.0.0.1:48656");
     let receiver_url = matches.value_of("RECEIVER_URL").unwrap_or("http://localhost:55555/v1/tracking/events");
